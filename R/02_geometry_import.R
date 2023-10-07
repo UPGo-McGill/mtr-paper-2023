@@ -33,12 +33,12 @@ city <-
   mutate(name = str_remove(name, " \\(CY\\)"))
 
 
-# DAs ---------------------------------------------------------------------
+# CTs ---------------------------------------------------------------------
 
-DA <-
+CT <-
   get_census(
     dataset = "CA21", regions = list(CSD = c("3520005", "2466023", "5915022")), 
-    level = "DA", geo_format = "sf") |> 
+    level = "CT", geo_format = "sf") |> 
   st_transform(3347) |> 
   select(-name) |> 
   left_join(st_drop_geometry(select(city, CSD_UID = GeoUID, name)), 
@@ -60,5 +60,5 @@ water <-
 
 # Save output -------------------------------------------------------------
 
-qsavem(city, CMA, DA, file = "output/data/geometry.qsm")
+qsavem(city, CMA, CT, file = "output/data/geometry.qsm")
 qsave(water, file = "output/data/water.qs")
