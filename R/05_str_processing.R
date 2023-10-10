@@ -119,14 +119,16 @@ GH <-
 
 GH <-
   GH |> 
-  st_drop_geometry() |> 
+  # st_drop_geometry() |> 
   unnest(property_IDs) |> 
   rename(property_ID = property_IDs) |> 
   left_join(select(monthly, property_ID, month, R, A, B), 
             by = c("property_ID", "month")) |> 
   summarize(property_IDs = list(property_ID),
             active_pct = sum(R + A) / sum(R + A + B),
-            .by = c(ghost_ID, month, n, host_ID, listing_count, housing_units))
+            .by = c(ghost_ID, month, n, host_ID, listing_count, housing_units, 
+                    geometry)) |> 
+  relocate(property_IDs, .before = geometry)
 
 GH <-
   GH |>
@@ -137,10 +139,9 @@ GH <-
 
 qsave(monthly, file = "output/data/monthly.qs", nthreads = availableCores())
 qsave(GH, file = "output/data/GH.qs", nthreads = availableCores())
-qsavem(after_one_year_2019, after_one_year_2022, model_2019, model_2022, 
-       model_2019_results, model_2022_results,
+qsavem(after_one_year_2022, model_2022, model_2022_results,
        file = "output/data/FREH_model.qsm", nthreads = availableCores())
 
-rm(after_one_year, model_3, model_3_results, model_3_test, monthly_FREH,
-   test_data_3, train_data_3, training_samples_3, predicted_classes_3,
-   probabilities_3)
+rm(after_one_year_2022, model_2022, model_2022_results, model_2022_test, 
+   monthly_FREH, test_data_2022, train_data_2022, training_samples_2022, 
+   predicted_classes_2022, probabilities_2022)
