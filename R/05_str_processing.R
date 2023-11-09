@@ -135,6 +135,16 @@ GH <-
   filter(month <= yearmonth("2023-05"))
 
 
+# Add city to monthly -----------------------------------------------------
+
+monthly <- 
+  monthly |> 
+  left_join(st_drop_geometry(select(property, property_ID, city)), 
+            by = "property_ID") |> 
+  relocate(city, CT, .after = listing_type)
+
+
+
 # Save output -------------------------------------------------------------
 
 qsave(monthly, file = "output/data/monthly.qs", nthreads = availableCores())
