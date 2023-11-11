@@ -10,6 +10,26 @@ qload("output/data/geometry.qsm", nthreads = availableCores())
 water <- qread("output/data/water.qs", nthreads = availableCores())
 
 
+# Table 2 -----------------------------------------------------------------
+
+# Unique properties
+property |> 
+  filter(scraped >= "2015-01-01") |> 
+  nrow()
+length(unique(ltr$id))
+
+# Time period
+c(min(monthly$month), max(monthly$month))
+c(min(ltr$scraped), max(ltr$scraped))
+
+# Total data points
+monthly |> 
+  filter(year(month) >= 2015) |> 
+  summarize(tot = sum(R + A + B)) |> 
+  pull()
+nrow(ltr)
+
+
 # Figure 1 ----------------------------------------------------------------
 
 monthly_activity <- 
@@ -60,12 +80,13 @@ figure_1 <-
                          NA_character_)) |>
   ggplot(aes(month, value, colour = name)) +
   geom_line(lwd = 1.5) +
-  geom_label(aes(label = label), alpha = 0.8, family = "Futura", size = 3) +
+  ggrepel::geom_label_repel(aes(label = label), alpha = 0.9, family = "Futura", 
+                            size = 3, force_pull = 0.5) +
   facet_wrap(~city, ncol = 3) +
   scale_y_continuous(name = NULL, labels = scales::percent) +
   scale_x_yearmonth(name = NULL) +
   scale_linetype_discrete(name = NULL) +
-  scale_colour_manual(name = NULL, values = col_palette[c(5, 1, 2, 6)]) +
+  scale_colour_manual(name = NULL, values = col_palette[c(5, 1, 2, 4)]) +
   theme_minimal() +
   theme(legend.position = "none", panel.grid.minor.x = element_blank(),
         plot.background = element_rect(fill = "white", colour = "transparent"),
@@ -357,7 +378,7 @@ ggsave("output/figure_3.png", plot = figure_3, width = 8, height = 7,
 
 # Figure 4 ----------------------------------------------------------------
 
-figure_4 <-
+ltr_shares <- 
   ltr |> 
   st_drop_geometry() |> 
   filter(scraped >= "2020-06-01", scraped <= "2022-12-31") |> 
@@ -366,7 +387,14 @@ figure_4 <-
   filter(short_pct >= 0.01, furn_pct > 0.1) |>
   mutate(furn_pct = slide_dbl(furn_pct, mean, .before = 1),
          short_pct = slide_dbl(short_pct, mean, .before = 1)) |> 
-  pivot_longer(c(short_pct, furn_pct)) |> 
+  pivot_longer(c(short_pct, furn_pct))
+
+# Furnished share at end of 2022
+ltr_shares |> 
+  filter(name == "furn_pct", scraped == max(scraped), .by = city)
+
+figure_4 <-
+  ltr_shares |> 
   mutate(label = if_else(scraped == "2020-10-07" & name == "furn_pct", 
                          city, NA_character_)) |>
   mutate(name = if_else(
@@ -376,7 +404,7 @@ figure_4 <-
   geom_line(lwd = 1) +
   geom_label(aes(label = label), alpha = 0.9, family = "Futura", size = 3) +
   facet_wrap(~name, scales = "free_y", nrow = 2) +
-  scale_colour_manual(values = col_palette[c(1, 5, 6)]) +
+  scale_colour_manual(values = col_palette[c(1, 5, 2)]) +
   scale_y_continuous(name = NULL, labels = scales::percent) +
   scale_x_date(name = NULL) +
   theme_minimal() +
@@ -407,11 +435,19 @@ rents <-
   mutate(min_28 = minimum_stay >= 28) |> 
   filter(month >= yearmonth("2020-04"), revenue > 0) |> 
   summarize(rent = sum(revenue) / sum(R), .by = c(month, min_28, city)) |> 
-  # Check to make sure all wards have observations
   transmute(platform = "Airbnb/Vrbo", month, city,
             type = if_else(min_28, "MTR", "STR"), rent) |> 
   bind_rows(rents)
 
+# Correlations
+rents |> 
+  filter(year(month) != 2023) |> 
+  mutate(platform = if_else(platform == "Kijiji", "kj", "ab")) |> 
+  pivot_wider(id_cols = c(month, city), names_from = c(platform, type), 
+              values_from = rent) |> 
+  group_split(city) |> 
+  map(\(x) cor(select(x, -month, -city)))
+  
 figure_5 <-
   rents |> 
   filter(year(month) != 2023) |> 
@@ -419,7 +455,8 @@ figure_5 <-
                          type, NA_character_)) |>
   ggplot(aes(month, rent, colour = type)) +
   geom_line(lwd = 1) +
-  geom_label(aes(label = label), alpha = 0.9, family = "Futura", size = 3) +
+  ggrepel::geom_label_repel(aes(label = label), alpha = 0.9, family = "Futura", 
+                            size = 3) +
   facet_grid(rows = vars(platform), cols = vars(city), scale = "free_y") + 
   scale_y_continuous(name = NULL, labels = scales::dollar) +
   scale_x_yearmonth(name = NULL, breaks = as.Date(
