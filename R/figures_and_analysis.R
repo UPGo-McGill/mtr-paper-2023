@@ -83,7 +83,8 @@ figure_1 <-
   ggrepel::geom_label_repel(aes(label = label), alpha = 0.9, family = "Futura", 
                             size = 3, force_pull = 0.5) +
   facet_wrap(~city, ncol = 3) +
-  scale_y_continuous(name = NULL, labels = scales::percent) +
+  scale_y_continuous(name = "MTR share of Airbnb/Vrbo listings", 
+                     labels = scales::percent) +
   scale_x_yearmonth(name = NULL) +
   scale_linetype_discrete(name = NULL) +
   scale_colour_manual(name = NULL, values = col_palette[c(5, 1, 2, 4)]) +
@@ -113,6 +114,27 @@ mtr_for_map <-
 # Correlations
 mtr_for_map |> 
   st_drop_geometry() |> 
+  transmute(dwell_pct = log(active / dwellings + 0.0000001), 
+            active_pct = log(active_pct + 0.0000001),
+            city) |> 
+  group_by(city) |> 
+  dplyr::group_split() |> 
+  map(select, -city) |> 
+  map(cor)
+
+# Correlations for only EH or for excluding condos
+monthly |> 
+  inner_join(select(property, property_ID, property_type), 
+             by = "property_ID") |> 
+  filter(listing_type == "Entire home/apt") |> 
+  # filter(!str_detect(property_type, "ondo")) |> 
+  filter(month == yearmonth("2023-05"), A + R > 0) |> 
+  mutate(min28 = minimum_stay >= 28) |> 
+  summarize(active = sum(A[min28] + R[min28]) / days_in_month(5),
+            active_pct = active / (sum(A + R) / days_in_month(5)),
+            .by = c(city, CT)) |> 
+  filter(active >= 1) |> 
+  inner_join(CT, by = c("CT" = "GeoUID")) |> 
   transmute(dwell_pct = log(active / dwellings + 0.0000001), 
             active_pct = log(active_pct + 0.0000001),
             city) |> 
@@ -362,7 +384,7 @@ figure_3 <-
   scale_fill_manual(name = "Listing type", 
                     values = col_palette[c(1, 2, 5, 4)]) +
   scale_x_yearmonth(name = NULL, limits = c(as.Date("2017-07-01"), NA)) +
-  scale_y_continuous(name = NULL, labels = scales::comma) +
+  scale_y_continuous(name = "Housing units", labels = scales::comma) +
   facet_wrap(~city, scales = "free_y", nrow = 3) +
   theme_minimal() +
   theme(legend.position = "bottom", 
@@ -405,7 +427,7 @@ figure_4 <-
   geom_label(aes(label = label), alpha = 0.9, family = "Futura", size = 3) +
   facet_wrap(~name, scales = "free_y", nrow = 2) +
   scale_colour_manual(values = col_palette[c(1, 5, 2)]) +
-  scale_y_continuous(name = NULL, labels = scales::percent) +
+  scale_y_continuous(name = "Share of listings", labels = scales::percent) +
   scale_x_date(name = NULL) +
   theme_minimal() +
   theme(legend.position = "none", panel.grid.minor.x = element_blank(),
@@ -458,7 +480,8 @@ figure_5 <-
   ggrepel::geom_label_repel(aes(label = label), alpha = 0.9, family = "Futura", 
                             size = 3) +
   facet_grid(rows = vars(platform), cols = vars(city), scale = "free_y") + 
-  scale_y_continuous(name = NULL, labels = scales::dollar) +
+  scale_y_continuous(name = "Nightly (top) or monthly (bottom) asking prices", 
+                     labels = scales::dollar) +
   scale_x_yearmonth(name = NULL, breaks = as.Date(
     c("2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01")), 
     labels = c("Jan 2020", "Jan 2021", "Jan 2022", "Jan 2023")) +
