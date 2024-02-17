@@ -26,11 +26,6 @@ library(gt)
 library(patchwork)
 library(qs)
 library(tsibble)
-# remotes::install_github("liamgilbey/ggwaffle")
-library(ggwaffle)
-library(ggh4x)
-library(feasts)
-library(fable)
 
 
 # Set global variables ----------------------------------------------------

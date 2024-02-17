@@ -331,8 +331,9 @@ FREH_total <-
   summarize(FREH = sum(FREH_2022), .by = c(min_28, month, city))
 
 # Re-process GH
-GH <- 
+GH_total <- 
   GH |> 
+  st_drop_geometry() |> 
   unnest(property_IDs) |> 
   rename(property_ID = property_IDs) |> 
   inner_join(monthly, by = c("month", "host_ID", "property_ID")) |> 
@@ -340,12 +341,7 @@ GH <-
     property_IDs = list(property_ID),
     min_28 = mean(minimum_stay >= 28, na.rm = TRUE) >= 0.5,
     .by = c(ghost_ID, month, city, n, host_ID, listing_count, housing_units, 
-            active_pct))
-
-# GH
-GH_total <-
-  GH |> 
-  st_drop_geometry() |> 
+            active_pct)) |> 
   mutate(days = days_in_month(month)) |> 
   summarize(GH = sum(housing_units * n / days), .by = c(min_28, month, city)) |> 
   arrange(month, min_28, city)
@@ -392,7 +388,8 @@ figure_3 <-
         plot.background = element_rect(fill = "white", colour = "transparent"),
         text = element_text(family = "Futura"), 
         strip.text = element_text(face = "bold"),
-        legend.title = element_text(face = "bold"))
+        legend.title = element_text(face = "bold"),
+        panel.spacing.y = unit(.5, "cm"))
 
 ggsave("output/figure_3.png", plot = figure_3, width = 8, height = 7, 
        units = "in")
