@@ -391,7 +391,7 @@ figure_3 <-
         legend.title = element_text(face = "bold"),
         panel.spacing.y = unit(.5, "cm"))
 
-ggsave("output/figure_3.png", plot = figure_3, width = 8, height = 7, 
+ggsave("output/figure_3.png", plot = figure_3, width = 8, height = 7, dpi = 450,
        units = "in")
 
 
